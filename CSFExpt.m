@@ -2,7 +2,7 @@ classdef CSFExpt
     %% Public Properties
     properties (Access = public)
         % Configuration flags
-        DEBUG = 0;
+        DEBUG = 0; DEBUG_WTS = 0;
         preload = 1; waitframes = 1;
         DARK = 1;
 
@@ -39,6 +39,7 @@ classdef CSFExpt
         sID;
         time;
         type; % to check if 'baseline'/ 'opto'/ 'eye-movements'
+        eyeData;
 
         %% sound variables
         beepBegin; beepHigh; beepLow;
@@ -54,6 +55,7 @@ classdef CSFExpt
             this.stim.condition = cond;
             this.sID = sID;
             this.DEBUG = config.DEBUG;
+            this.DEBUG_WTS = config.DEBUG_WTS;
             if isfield(config, 'fRate') && (config.fRate ~= 0)
                 this.display.fRate = config.fRate;
             end
@@ -71,11 +73,15 @@ classdef CSFExpt
 
             this.time.startExp = datestr(now);
             this = SetExptVariables(this, config.photoswitch);
+            %             if ~this.DEBUG_WTS
             this = SetScreenSettings(this);
+            %             end
             setKbSettings(this);
             this = SetFbSoundSettings(this, 0.02, 0.04, 0.01);
             this = DefineInputParams(this, config.inputType);
-            %             this = RunExpt(this);
+            if strcmp(this.type{1,1},'eye')
+                this = ImportEyeMovements(this);
+            end
         end
 
         %% Routine to run the experiment
@@ -89,6 +95,7 @@ classdef CSFExpt
                 data = dictionary();
                 redoTrials = []; % list of trials repeated
 
+                sub_id = randi(29);
                 for i= 1: length(this.FF)
                     qcsf = SetQCSF(this);
                     close all
@@ -100,10 +107,11 @@ classdef CSFExpt
                         %% Go through trial
                         % Play trial start sound
                         PlayFbSounds(this, '0');
-                        Screen('FillRect',this.theScreen,this.display.gray)
-                        DrawFormattedText(this.theScreen, '.', 'center', 'center', 0);
-                        Screen('Flip',this.theScreen)
-
+                        if ~this.DEBUG_WTS
+                            Screen('FillRect',this.theScreen,this.display.gray)
+                            DrawFormattedText(this.theScreen, '.', 'center', 'center', 0);
+                            Screen('Flip',this.theScreen)
+                        end
                         %%
                         if strcmp(this.type{1,1},'opto') || strcmp(this.type{1,1}, 'eye')
                             WaitSecs(0.005);
@@ -113,8 +121,8 @@ classdef CSFExpt
                         qcsf.data.trial = trial;
                         [qcsf,VF,contrast] = runQCSF(qcsf, 'pretrial');
                         %% Determine whether contrast stim is -45 or 45 deg (or 0/90, or whatever you end up picking)
-                        % CR = ceil(2*rand);
-                        CR = randi(2);
+                        CR = ceil(2*rand);
+%                         CR = randi(2);
                         if CR == 1
                             orient = -45; % in degress
                         else
@@ -123,27 +131,51 @@ classdef CSFExpt
 
 
                         if (strcmp(this.fixFreq,'temporal'))
-                            [stimulus] = GenerateGrating(this, VF, this.FF(i), contrast, orient);
                             if strcmp(this.type{1,1},'baseline')
+                                [stimulus] = GenerateGrating(this, VF, this.FF(i), contrast, orient);
                                 Tex = MakeTex(this, stimulus, this.FF(i), contrast);
                             elseif strcmp(this.type{1,1},'opto')
+                                [stimulus] = GenerateGrating(this, VF, this.FF(i), contrast, orient);
+                                Tex = ApplyOptoFilter(this, stimulus, this.FF(i), contrast);
+                            elseif strcmp(this.type{1,1},'eye')
+                                break_cond = 0;
+                                while (break_cond == 0)
+                                    trial_eyeData = this.eyeData{randi(size(this.eyeData, 1)), sub_id};
+                                    if ~isempty(trial_eyeData)
+                                        break_cond = 1;
+                                    end
+                                end 
+                                [stimulus] = GenerateEMGrating(this, VF, this.FF(i), contrast, orient, trial_eyeData); % Generates grating with eye-movement if 'eye'
                                 Tex = ApplyOptoFilter(this, stimulus, this.FF(i), contrast);
                             end
 
 
                         elseif(strcmp(this.fixFreq,'spatial'))
-                            [stimulus] = GenerateGrating(this, this.FF(i), VF, contrast,orient);
                             if strcmp(this.type{1,1},'baseline')
+                                [stimulus] = GenerateGrating(this, this.FF(i), VF, contrast,orient);
                                 Tex = MakeTex(this, stimulus, VF, contrast);
                             elseif strcmp(this.type{1,1},'opto')
+                                [stimulus] = GenerateGrating(this, this.FF(i), VF, contrast,orient);
                                 Tex = ApplyOptoFilter(this, stimulus, VF, contrast); % returns the texture if opto
+                            elseif strcmp(this.type{1,1},'eye')
+                                break_cond = 0;
+                                while (break_cond == 0)
+                                    trial_eyeData = this.eyeData{randi(size(this.eyeData, 1)), sub_id};
+                                    if ~isempty(trial_eyeData)
+                                        break_cond = 1;
+                                    end
+                                end 
+                                [stimulus] = GenerateEMGrating(this, this.FF(i), VF, contrast, orient, trial_eyeData); % Generates grating with eye-movement if 'eye'
+                                Tex = ApplyOptoFilter(this, stimulus, VF, contrast); 
+
                             end
                         end
 
-
-                        if this.preload
-                            Screen('PreloadTextures', this.theScreen, Tex);
-                            % disp('Textures are preloaded');
+                        if ~this.DEBUG_WTS
+                            if this.preload
+                                Screen('PreloadTextures', this.theScreen, Tex);
+                                % disp('Textures are preloaded');
+                            end
                         end
 
 
@@ -154,8 +186,10 @@ classdef CSFExpt
                         while (GetSecs() - StartT) < this.stim.dur/1000
                             k = ceil((GetSecs() - StartT) .* this.display.fRate); % current frame based on current time
                             if k <= (this.stim.numFrames)
-                                Screen('DrawTextures', this.theScreen, Tex(k));
-                                Screen('Flip', this.theScreen); % show to participant
+                                if ~this.DEBUG_WTS
+                                    Screen('DrawTextures', this.theScreen, Tex(k));
+                                    Screen('Flip', this.theScreen); % show to participant
+                                end
                                 frame_time(k) = 1;
                             end
                         end
@@ -171,8 +205,10 @@ classdef CSFExpt
                         end
 
                         % Finish with background
-                        Screen('FillRect', this.theScreen, this.display.gray);
-                        Screen('Flip', this.theScreen);
+                        if ~this.DEBUG_WTS
+                            Screen('FillRect', this.theScreen, this.display.gray);
+                            Screen('Flip', this.theScreen);
+                        end
                         toc
 
                         tic
@@ -200,7 +236,9 @@ classdef CSFExpt
                         else
                             fprintf('Trial %i is going to be repeated.', trial)
                         end
-                        Screen('Close');
+                        if ~this.DEBUG_WTS
+                            Screen('Close');
+                        end
 
                     end
 
@@ -222,8 +260,9 @@ classdef CSFExpt
                 Screen('CloseAll');
                 ListenChar(0);
                 ShowCursor;
-                BitsPlusPlus('Close');
-
+                if ~this.DEBUG_WTS
+                    BitsPlusPlus('Close');
+                end
                 outputdir = [this.homedir filesep 'output' filesep this.sID];
                 if ~(isfolder(outputdir))
                     mkdir(outputdir)
@@ -237,8 +276,9 @@ classdef CSFExpt
                 Screen('CloseAll');
                 ListenChar(0);
                 ShowCursor;
-                BitsPlusPlus('Close');
-
+                if ~this.DEBUG_WTS
+                    BitsPlusPlus('Close');
+                end
                 outputdir = [this.homedir filesep 'output' filesep this.sID];
                 if ~(isfolder(outputdir))
                     mkdir(outputdir)
@@ -247,6 +287,10 @@ classdef CSFExpt
                 rethrow(ME);
 
             end
+        end
+
+        function [this] = ImportEyeMovements(this)
+            this.eyeData = ImportFixationData(this.display.fRate, append(cd, "/Data/eyemovements/"));
         end
     end
 
@@ -312,8 +356,8 @@ classdef CSFExpt
                     % fixing the SF fequencies based on the experiment condition
                     this.fixFreq = 'spatial';
                     if this.DEBUG
-                        this.stim.FF =  [7 10];
-                        this.stim.numTrialsPerFreq = 3;
+                        this.stim.FF =  [1, 5];
+                        this.stim.numTrialsPerFreq = 6;
                         this.stim.seed = rng(230).Seed;
                         this.FF = this.stim.FF;
                     else
@@ -337,13 +381,14 @@ classdef CSFExpt
             %% Open the screen and prepare stuff
             try
                 % DISPLAY++ DEFAULTS
-                PsychDefaultSetup(2);
-                PsychImaging('PrepareConfiguration');
-                PsychImaging('AddTask', 'General', 'FloatingPoint32Bit');
-                PsychImaging('AddTask', 'FinalFormatting', 'DisplayColorCorrection', 'ClampOnly');
-                PsychImaging('AddTask', 'General', 'EnableBits++Mono++Output');
-                BitsPlusPlus('OpenBits#');
-                
+                if ~this.DEBUG_WTS
+                    PsychDefaultSetup(2);
+                    PsychImaging('PrepareConfiguration');
+                    PsychImaging('AddTask', 'General', 'FloatingPoint32Bit');
+                    PsychImaging('AddTask', 'FinalFormatting', 'DisplayColorCorrection', 'ClampOnly');
+                    PsychImaging('AddTask', 'General', 'EnableBits++Mono++Output');
+                    BitsPlusPlus('OpenBits#');
+                end
                 if this.DARK
                     if strcmp(this.type{1,1},'opto') || strcmp(this.type{1,1}, 'eye')
                         this.display.gray = this.p.delta;
@@ -354,13 +399,16 @@ classdef CSFExpt
                     this.display.gray = WhiteIndex(this.display.screen)/2;
                 end
 
+                if ~this.DEBUG_WTS
+                    [this.theScreen, theScreenArea] = PsychImaging('OpenWindow',this.display.screen,this.display.gray, [0 0 screenRes(3) screenRes(4)]);
 
-                [this.theScreen, theScreenArea] = PsychImaging('OpenWindow',this.display.screen,this.display.gray, [0 0 screenRes(3) screenRes(4)]);
+                    % Generally recommended for graphics
+                    Screen('BlendFunction', this.theScreen, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-                % Generally recommended for graphics
-                Screen('BlendFunction', this.theScreen, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-                ifi = Screen('GetFlipInterval', this.theScreen);
+                    ifi = Screen('GetFlipInterval', this.theScreen);
+                else
+                    ifi = 1/this.display.fRate;
+                end
                 MaxTime = this.stim.dur/1000; % Set maximum time for all stimuli to be presented in seconds
                 %                 numFrames = round(MaxTime/ifi); % Number of frames per trial
                 this.t = 1/this.display.fRate :1/this.display.fRate :MaxTime;  % asssume 120Hz
@@ -371,19 +419,21 @@ classdef CSFExpt
                     error('Frame rate is %5.2f Hz',1/ifi);
                 end
 
-                % Text settings
-                text.size = 40;
-                text.color = 1;
+                if ~this.DEBUG_WTS
+                    % Text settings
+                    text.size = 40;
+                    text.color = 1;
 
-                % Setting the screen text size
-                Screen('TextSize', this.theScreen, text.size);
+                    % Setting the screen text size
+                    Screen('TextSize', this.theScreen, text.size);
 
-                % Flip (show) the screen
-                this.flipHandle = Screen('Flip', this.theScreen);
+                    % Flip (show) the screen
+                    this.flipHandle = Screen('Flip', this.theScreen);
 
-                % Hide cursor
-                HideCursor;
-                ListenChar(2);
+                    % Hide cursor
+                    HideCursor;
+                    ListenChar(2);
+                end
 
             catch ME
                 disp('Error in opening the screen.')
@@ -494,12 +544,29 @@ classdef CSFExpt
 
         %% Generate an input grating for a given SF and TF
         function [stimulus] = GenerateGrating(this, SF, TF, contrast, orient)
-
-            % ramp
             ramp = cos(orient*pi/180)*this.input.params.x + sin(orient*pi/180)*this.input.params.y;
             grating = contrast*cos(2*pi*ramp*SF).*this.input.aperture;
             tt = sin(2*pi*this.t*TF)'.*this.stim.ramp'; % Use the outer product to get 'stimulus' which is the counterphase grating movie (very fast).
             stimulus = tt*grating(:)';
+        end
+
+        function [stimulus] = GenerateEMGrating(this, SF, TF, contrast, orient, eyeData)
+            stimulus = [];
+            ramp = cos(orient*pi/180)*this.input.params.x + sin(orient*pi/180)*this.input.params.y;
+            first_frame = 0; eye_iter = 0;
+            last_frame = eyeData(3, 1);
+            while (last_frame < length(this.t) || (first_frame == 0))
+                    eye_iter = eye_iter+1;
+                 last_frame = min(length(this.t), first_frame+eyeData(3, eye_iter));
+                if orient == 45
+                    grating = contrast*cos((2*pi*SF)*(ramp - eyeData(4,eye_iter))).*this.input.aperture;
+                else
+                    grating = contrast*cos((2*pi*SF)*(ramp - eyeData(5,eye_iter))).*this.input.aperture;
+                end
+                tt = sin(2*pi*TF*(this.t(first_frame+1:last_frame)))';%.*ones(last_frame-first_frame,1); % Use the outer product to get 'stimulus' which is the counterphase grating movie (very fast).
+                stimulus(first_frame+1 : last_frame, :) = tt*grating(:)';
+                first_frame = last_frame;
+            end
         end
 
         %% Setting the optogenetic parameters for a specified opto-protein model
@@ -517,27 +584,11 @@ classdef CSFExpt
                     'offset', 0.9899, ...
                     'opto_black', 1);
             end
-            %             this.p.fitModel = '4_BGAG_12_460_SNAPmGluR'; % Holt photoswitch
-            %             p.baseline = 0;
-            %             p.tau_on = .05;    % 'linear' filter onset time constant
-            %             p.tau_off = .3;    % 'linear' filter offset time constant
-            %             p.ampFac = 20;    % scale factor for stimulus influence on linear filter
-            %             p.bFac = .7; %.05; % scale factor for stimulus influence on 'b'
-            %             p.tau_b = .5;      % time constant for recovery of 'b' toward initial baseline
-            %             % p.scaleFactor = 4; % scale factor based on getScalingFactor_DISPLAYPP.m run at TF = 0.5
-            %
-            %             % original gratings were scaled between 0 - 1
-            %             % opto response at it's max contrast (low TF) goes between -0.9899 and 3.9596
-            %             % rescale them, based on a low TF grating
-            %             p.delta = 0.202;
-            %             p.offset = 0.9899;
-            % this is needed because as the TF increases the
-            % amplitude decreasing effect of the optogenetic protein
-            % increases. See Watson temporal sensitivity
         end
 
         %% Function to apply optogenetic filter on the given stimulus input
         function [Tex] = ApplyOptoFilter(this, stimulus, TF, contrast)
+            Tex = [];
             result = this.p.delta*(zeros(size(stimulus))+this.p.offset);
             % Find the varying pixels.
             gv = ((1/(contrast*TF))*var(stimulus)>0.000000);
@@ -569,11 +620,14 @@ classdef CSFExpt
                     result(j,gv) = this.p.delta*(opto_out(j,:)+this.p.offset);
                 end
                 img = reshape(result(j,:),size(this.input.aperture));
-                Tex(j) = Screen('MakeTexture', this.theScreen, img(:,:));
+                if ~this.DEBUG_WTS
+                    Tex(j) = Screen('MakeTexture', this.theScreen, img(:,:));
+                end
             end
         end
 
         function [Tex] = MakeTex(this, stimulus, TF, contrast)
+            Tex = [];
             gv = ((1/(contrast*TF))*var(stimulus)>0); %0.000001);
             % Pull out the subset of the stimulus movie containing only varying pixels.
             G = stimulus(:,gv);
@@ -582,9 +636,31 @@ classdef CSFExpt
             for frame=1:length(this.t)
                 gratings(frame,gv) = G(frame,:);
                 img = reshape(gratings(frame,:),size(this.input.aperture));
-                Tex(frame) = Screen('MakeTexture', this.theScreen, img(:,:));
+                if ~this.DEBUG_WTS
+                    Tex(frame) = Screen('MakeTexture', this.theScreen, img(:,:));
+                end
             end
         end
+
+
+        %% Need to implement this
+        function CorrectEyeMovement(this, result, eyeData)
+            first_frame = 0; eye_iter = 0;
+            last_frame = eyeData(3, 1);
+            while (last_frame < length(this.t) || (first_frame == 0))
+                    eye_iter = eye_iter+1;
+                 last_frame = min(length(this.t), first_frame+eyeData(3, eye_iter));
+                if orient == 45
+                    result = contrast*cos((2*pi*SF)*(ramp - eyeData(4,eye_iter))).*this.input.aperture;
+                else
+                    grating = contrast*cos((2*pi*SF)*(ramp - eyeData(5,eye_iter))).*this.input.aperture;
+                end
+                tt = sin(2*pi*TF*(this.t(first_frame+1:last_frame)))';%.*ones(last_frame-first_frame,1); % Use the outer product to get 'stimulus' which is the counterphase grating movie (very fast).
+                stimulus(first_frame+1 : last_frame, :) = tt*grating(:)';
+                first_frame = last_frame;
+            end
+        end
+    
     end
 end
 

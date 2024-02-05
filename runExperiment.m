@@ -1,4 +1,3 @@
-
 clear all; close all; clc;
 
 addpath(genpath('/qCSF_v1/'));
@@ -6,7 +5,6 @@ addpath(genpath('../UWToolbox'));
 
 sID = input('Please enter subject initials? ', 's');
 sID = upper(sID);
-
 cond_prompt = input(['Please choose the experiment condition: \n' ...
     '0. Demo experiment \n' ...
     '1. for baseline with fixed TF: baseline_v1 \n' ...
@@ -37,7 +35,8 @@ switch cond_prompt
 
 end
 
-config.DEBUG = 1;
+config.DEBUG = 1; % Set this to 1 to debug the functionality with only a few trials
+config.DEBUG_WTS = 0; % Set this to 1 to debug without the psychtoolbox screen being displayed
 config.fRate = 60;
 config.photoswitch = '4_BGAG_12_460_SNAPmGluR';
 config.inputType = 'grating' ;
