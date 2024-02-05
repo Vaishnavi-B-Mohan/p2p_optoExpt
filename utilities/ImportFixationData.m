@@ -59,7 +59,7 @@ for img_id = 1:length(files) % iterating through images
         temp(1,:) = ((temp(1,:)*scale(1)));
         temp(2,:) = (temp(2,:)*scale(2));
 
-        temp(3,:) = floor((fix_data{1, sub_id}(3,1:end-1)*scale(3))/3);
+        temp(3,:) = floor((fix_data{1, sub_id}(3,1:end-1)*scale(3))/2);
         temp(4,:) = FindProjection(temp(1:2,:), 1);
         temp(5,:) = FindProjection(temp(1:2,:),-1);
         eyeData{img_id, sub_id} = temp;

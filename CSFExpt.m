@@ -556,8 +556,12 @@ classdef CSFExpt
             first_frame = 0; eye_iter = 0;
             last_frame = eyeData(3, 1);
             while (last_frame < length(this.t) || (first_frame == 0))
-                    eye_iter = eye_iter+1;
-                 last_frame = min(length(this.t), first_frame+eyeData(3, eye_iter));
+                eye_iter = eye_iter+1;
+                if eye_iter < size(eyeData,2)
+                    last_frame = min(length(this.t), first_frame+eyeData(3, eye_iter));
+                else
+                    last_frame = length(this.t);
+                end
                 if orient == 45
                     grating = contrast*cos((2*pi*SF)*(ramp - eyeData(4,eye_iter))).*this.input.aperture;
                 else
