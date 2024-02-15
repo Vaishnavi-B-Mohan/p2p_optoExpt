@@ -16,19 +16,19 @@ cond_prompt = input(['Please choose the experiment condition: \n' ...
 
 switch cond_prompt
     case 0
-        cond_prompt = 'demo';
+        cond_prompt = 'demo'; % Doesn't work yet. Don't bother
     case 1
-        cond_prompt = 'baseline_v1';
+        cond_prompt = 'baseline_v1'; % Baseline condition with fixed temporal frequencies
     case 2
-        cond_prompt = 'baseline_v2';
+        cond_prompt = 'baseline_v2'; % Baseline condition with fixed spatial frequencies
     case 3
-        cond_prompt = 'opto_v1';
+        cond_prompt = 'opto_v1'; % Opto condition with fixed temporal frequencies
     case 4
-        cond_prompt = 'opto_v2';
+        cond_prompt = 'opto_v2'; % Opto condition with fixed spatial frequencies
     case 5
-        cond_prompt = 'eye_v1';
+        cond_prompt = 'eye_v1'; % Opto (with eye-movements) with fixed temporal frequencies
     case 6
-        cond_prompt = 'eye_v2';
+        cond_prompt = 'eye_v2'; % Opto (with eye-movements) with fixed spatial frequencies
     otherwise
         sprintf("Please enter a valid condition. Thanks!")
         return;
