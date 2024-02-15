@@ -35,7 +35,7 @@ disp.dims = [71, 40];
 disp.span = PixelToVisAngle([disp.dims, disp.depth], 0);
 disp.pixperdeg(:) = round(disp.res(1)./disp.span(1));
 
-scale = [(disp.pixperdeg/org.pixperdeg)*[1,1], disp.fps/org.fps];
+scaleFac = [(disp.pixperdeg/org.pixperdeg)*[1,1], disp.fps/org.fps];
 
 %Load the fixations from all subjects for all images.
 for img_id = 1:length(files) % iterating through images
@@ -56,10 +56,10 @@ for img_id = 1:length(files) % iterating through images
 
         temp = [];
         temp = diff(fix_data{1, sub_id},1,2);
-        temp(1,:) = ((temp(1,:)*scale(1)));
-        temp(2,:) = (temp(2,:)*scale(2));
+        temp(1,:) = ((temp(1,:)*scaleFac(1)));
+        temp(2,:) = (temp(2,:)*scaleFac(2));
 
-        temp(3,:) = floor((fix_data{1, sub_id}(3,1:end-1)*scale(3))/2);
+        temp(3,:) = floor((fix_data{1, sub_id}(3,1:end-1)*scaleFac(3))/2);
         temp(4,:) = FindProjection(temp(1:2,:), 1);
         temp(5,:) = FindProjection(temp(1:2,:),-1);
         eyeData{img_id, sub_id} = temp;
