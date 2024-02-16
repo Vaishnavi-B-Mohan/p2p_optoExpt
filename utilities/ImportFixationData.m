@@ -1,8 +1,9 @@
 % Get fixation data
-function [eyeData] = ImportFixationData(displayFps, DATA_DIR, save_flag)
+function [eyeData] = ImportFixationData(displayFps, DATA_DIR, save_flag, jitter_flag)
 
 if nargin <=2 
     save_flag = 0;
+    jitter_flag = 0;
 end
 % DATA_DIR        = '../Data/eyemovements/';
 if ~exist(DATA_DIR)
@@ -41,6 +42,9 @@ scaleFac = [(disp.pixperdeg/org.pixperdeg)*[1,1], disp.fps/org.fps];
 for img_id = 1:length(files) % iterating through images
     load (append(DATA_DIR, files(img_id).name)); %loads subj_names_list, fix_data, eye_data
     for sub_id = 1:length(fix_data) % iterating through subjects
+        if jitter_flag
+            eyeData{1, sub_id} = [];
+        end
         %         if img_id == 1
         %             fix_dur.("sub_" + string(sub_id)) = [];
         %             fix_loc.("sub_" + string(sub_id)) = [];
@@ -59,10 +63,17 @@ for img_id = 1:length(files) % iterating through images
         temp(1,:) = ((temp(1,:)*scaleFac(1)));
         temp(2,:) = (temp(2,:)*scaleFac(2));
 
-        temp(3,:) = floor((fix_data{1, sub_id}(3,1:end-1)*scaleFac(3))/2);
-        temp(4,:) = FindProjection(temp(1:2,:), 1);
-        temp(5,:) = FindProjection(temp(1:2,:),-1);
-        eyeData{img_id, sub_id} = temp;
+        if jitter_flag
+            temp(3,:) = floor((fix_data{1, sub_id}(3,1:end-1)*scaleFac(3))/10);
+            temp(4,:) = FindProjection(temp(1:2,:), 1);
+            temp(5,:) = FindProjection(temp(1:2,:),-1);
+            eyeData{1, sub_id} = [eyeData{1, sub_id}, temp];
+        else
+            temp(3,:) = floor((fix_data{1, sub_id}(3,1:end-1)*scaleFac(3))/2);
+            temp(4,:) = FindProjection(temp(1:2,:), 1);
+            temp(5,:) = FindProjection(temp(1:2,:),-1);
+            eyeData{img_id, sub_id} = temp;
+        end
 
         %         figure(1)
         %         plot(fix_loc.("sub_" + string(sub_id))(1,:), fix_loc.("sub_" + string(sub_id))(2,:),'ko', 'MarkerFaceColor','g');

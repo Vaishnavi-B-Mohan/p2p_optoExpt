@@ -4,7 +4,7 @@ classdef CSFExpt
         % Configuration flags
         DEBUG = 0; DEBUG_WTS = 0;
         preload = 1; waitframes = 1;
-        DARK = 1;
+        DARK = 1; jitter_flag = 0;
 
         % Stimulus variable(s)
         % centre of the stimulus (in degrees of VA - usually set this to 0)
@@ -56,6 +56,7 @@ classdef CSFExpt
             this.sID = sID;
             this.DEBUG = config.DEBUG;
             this.DEBUG_WTS = config.DEBUG_WTS;
+            this.jitter_flag = config.jitter_flag;
             if isfield(config, 'fRate') && (config.fRate ~= 0)
                 this.display.fRate = config.fRate;
             end
@@ -296,7 +297,7 @@ classdef CSFExpt
         end
 
         function [this] = ImportEyeMovements(this)
-            this.eyeData = ImportFixationData(this.display.fRate, append(cd, "/Data/eyemovements/"));
+            this.eyeData = ImportFixationData(this.display.fRate, append(cd, "/Data/eyemovements/"), 0 ,this.jitter_flag);
         end
     end
 
@@ -367,7 +368,7 @@ classdef CSFExpt
                         this.stim.seed = rng(230).Seed;
                         this.FF = this.stim.FF;
                     else
-                        this.stim.FF = exp(linspace(log(0.5), log(30),5));
+                        this.stim.FF = exp(linspace(log(0.5), log(36),5));
                         this.stim.seed = rng('shuffle').Seed;
                         this.stim.numTrialsPerFreq = 50;
                         this.FF = this.stim.FF(randperm(length(this.stim.FF)));
@@ -567,7 +568,7 @@ classdef CSFExpt
 
         function [stimulus] = GenerateEMGrating(this, SF, TF, contrast, orient, eyeData)
             stimulus = [];
-%             TF = 0;
+            % TF = 1.5;
             ramp = cos(orient*pi/180)*this.input.params.x + sin(orient*pi/180)*this.input.params.y;
             first_frame = 0; eye_iter = 0;
             last_frame = eyeData(3, 1);
@@ -579,14 +580,22 @@ classdef CSFExpt
                     last_frame = length(this.t);
                 end
                 if orient == 45
-                    grating = contrast*cos((2*pi*SF)*(ramp - eyeData(4,eye_iter)));%.*this.input.aperture;
+                    grating1 = contrast*cos((2*pi*SF)*(ramp - eyeData(4,eye_iter)/3)).*this.input.aperture;
+                    grating2 = contrast*cos((2*pi*SF)*(ramp - 2*eyeData(4,eye_iter)/3)).*this.input.aperture;
+                    grating3 = contrast*cos((2*pi*SF)*(ramp - eyeData(4,eye_iter))).*this.input.aperture;
                 else
-                    grating = contrast*cos((2*pi*SF)*(ramp - eyeData(5,eye_iter)));%.*this.input.aperture;
+                    grating1 = contrast*cos((2*pi*SF)*(ramp - eyeData(5,eye_iter)/3)).*this.input.aperture;
+                    grating2 = contrast*cos((2*pi*SF)*(ramp - 2*eyeData(5,eye_iter)/3)).*this.input.aperture;
+                    grating3 = contrast*cos((2*pi*SF)*(ramp - eyeData(5,eye_iter))).*this.input.aperture;
                 end
                 %                 grating = contrast*cos(2*pi*SF*ramp);
                 %                 grating = imtranslate(grating, [eyeData(1,eye_iter), eyeData(2,eye_iter)]);
-                tt = cos(2*pi*TF*(this.t(first_frame+1:last_frame)))';%.*this.stim.ramp; % Use the outer product to get 'stimulus' which is the counterphase grating movie (very fast).
-                stimulus(first_frame+1 : last_frame, :) = tt*grating(:)';
+                tt1 = sin(2*pi*TF*(this.t(first_frame+1:last_frame-2)))';%.*this.stim.ramp; % Use the outer product to get 'stimulus' which is the counterphase grating movie (very fast).
+                tt2 = [sin(2*pi*TF*(this.t(last_frame-1)))];
+                tt3 = [sin(2*pi*TF*(this.t(last_frame)))];
+                stimulus(first_frame+1 : last_frame-2, :) = tt1*grating1(:)';
+                stimulus(last_frame-1, :) = tt2*grating2(:)';
+                stimulus(last_frame, :) = tt3*grating3(:)';
                 first_frame = last_frame;
             end
         end
@@ -683,9 +692,10 @@ classdef CSFExpt
 
         %% Function to correct for eye movements - saccadic suppression
         function [eye_stim] = CorrectEyeMovement(this, opto_stim, eyeData, SF, orient)
+            % aperture = this.p.delta*(this.input.aperture+this.p.offset);
             first_frame = 0; eye_iter = 1;
             last_frame = eyeData(3, 1);
-            eye_stim = this.p.delta*(zeros(size(opto_stim))+this.p.offset);
+            eye_stim = zeros(size(opto_stim));
             if orient == 45
                 movex = (mod(eyeData(4,1),SF))*cos(orient);
                 movey = (mod(eyeData(4,1),SF))*sin(orient);
@@ -696,7 +706,7 @@ classdef CSFExpt
             % move_aperture = exp(-((this.input.params.x+movex).^2+(this.input.params.y+movey).^2)/(2*this.stim.sigma^2));
 
             for frame=1:length(this.t)
-                if frame == last_frame
+                if (frame == last_frame) && (eye_iter < size(eyeData,2))
                     eye_iter = eye_iter+1;
                     first_frame = last_frame;
                     last_frame = min(length(this.t), first_frame+eyeData(3, eye_iter));
@@ -711,9 +721,7 @@ classdef CSFExpt
 
                     % temp = (reshape(opto_stim(frame,:),size(move_aperture))).*move_aperture;
                     temp = reshape(opto_stim(frame,:),size(this.input.aperture));
-                    temp2 = imtranslate(temp, [-1*movex, -1*movey]);
-                    temp2 = temp2.*this.input.aperture;
-                    temp2 = this.p.delta*(temp2+this.p.offset);
+                    temp2 = imtranslate(temp, [-1*movex, -1*movey], 'FillValues',this.display.gray-0.002);
                     eye_stim(frame, :) = temp2(:);
                     % move_aperture = exp(-((this.input.params.x+movex).^2+(this.input.params.y+movey).^2)/(2*this.stim.sigma^2));
             end
