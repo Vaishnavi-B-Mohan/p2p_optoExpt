@@ -44,5 +44,5 @@ config.inputType = 'grating' ;
 expt = CSFExpt(cond_prompt, sID, config);
 RunExpt(expt);
 
-sprintf("Lalala")
+sprintf("Thank you. Goodbye!")
 
