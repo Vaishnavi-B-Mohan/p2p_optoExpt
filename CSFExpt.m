@@ -2,7 +2,7 @@ classdef CSFExpt
     %% Public Properties
     properties (Access = public)
         % Configuration flags
-        DEBUG = 0; DEBUG_WTS = 0;
+        DEBUG = 0; DEBUG_WTS = 0; DEBUG_STIMCHANGE = 0;
         preload = 1; waitframes = 1;
         DARK = 1; jitter_flag = 0;
 
@@ -55,7 +55,12 @@ classdef CSFExpt
             this.stim.condition = cond;
             this.sID = sID;
             this.DEBUG = config.DEBUG;
+            this.DEBUG_STIMCHANGE = config.DEBUG_STIMCHANGE;
+            if this.DEBUG_STIMCHANGE
+                this.DEBUG_WTS = 1;
+            else
             this.DEBUG_WTS = config.DEBUG_WTS;
+            end
             this.jitter_flag = config.jitter_flag;
             if isfield(config, 'fRate') && (config.fRate ~= 0)
                 this.display.fRate = config.fRate;
@@ -99,7 +104,7 @@ classdef CSFExpt
                 sub_id = randi(29);
                 for i= 1: length(this.FF)
                     qcsf = SetQCSF(this);
-                    close all
+                    
                     % initialize redoTrial flag to avoid skipping frames
                     redoTrial = 0;
                     breakExperiment = 0;
@@ -129,16 +134,21 @@ classdef CSFExpt
                         else
                             orient = 45;
                         end
-
+                        
+                        if this.DEBUG_STIMCHANGE
+                            orient = 0;
+                        end
 
                         if (strcmp(this.fixFreq,'temporal'))
                             if strcmp(this.type{1,1},'baseline')
-                                [~,gratings] = GenerateGrating(this, VF, this.FF(i), contrast, orient);
-                                Tex = MakeTex(this, gratings);
+                                grating = GenerateGrating(this, VF, this.FF(i), contrast, orient);
+                                stimulus = ScaleStimulus(this, grating, this.display.gray, 1, contrast, this.FF(i));
+                                
                             elseif strcmp(this.type{1,1},'opto')
-                                [stimulus, ~] = GenerateGrating(this, VF, this.FF(i), contrast, orient);
-                                opto_stim = ApplyOptoFilter(this, stimulus, this.FF(i), contrast);
-                                Tex = MakeTex(this, opto_stim);
+                                grating = GenerateGrating(this, VF, this.FF(i), contrast, orient);
+                                opto = ApplyOptoFilter(this, grating, this.FF(i), contrast);
+                                stimulus =  ScaleStimulus(this, opto, this.p.delta, this.p.offset, contrast, this.FF(i));
+
                             elseif strcmp(this.type{1,1},'eye')
                                 break_cond = 0;
                                 while (break_cond == 0)
@@ -147,21 +157,24 @@ classdef CSFExpt
                                         break_cond = 1;
                                     end
                                 end
-                                [stimulus] = GenerateEMGrating(this, VF, this.FF(i), contrast, orient, trial_eyeData); % Generates grating with eye-movement if 'eye'
-                                opto_stim = ApplyOptoFilter(this, stimulus, this.FF(i), contrast);
-                                eye_stim = CorrectEyeMovement(this, opto_stim, trial_eyeData, VF, orient);
-                                Tex = MakeTex(this, eye_stim);
+                                grating = GenerateEMGrating(this, VF, this.FF(i), contrast, orient, trial_eyeData); % Generates grating with eye-movement if 'eye'
+                                opto = ApplyOptoFilter(this, grating, this.FF(i), contrast);
+                                eye = CorrectEyeMovement(this, opto, trial_eyeData, VF, orient);
+                                stimulus =  ScaleStimulus(this, eye, this.p.delta, this.p.offset, contrast, this.FF(i));
+                        
                             end
 
 
                         elseif(strcmp(this.fixFreq,'spatial'))
                             if strcmp(this.type{1,1},'baseline')
-                                [~, gratings] = GenerateGrating(this, this.FF(i), VF, contrast,orient);
-                                Tex = MakeTex(this, gratings);
+                                grating = GenerateGrating(this, this.FF(i), VF, contrast,orient);
+                                stimulus =  ScaleStimulus(this, grating, this.display.gray, 1, contrast, VF);
+            
                             elseif strcmp(this.type{1,1},'opto')
-                                [stimulus, ~] = GenerateGrating(this, this.FF(i), VF, contrast,orient);
-                                opto_stim = ApplyOptoFilter(this, stimulus, VF, contrast); % returns the texture if opto
-                                Tex = MakeTex(this, opto_stim);
+                                grating = GenerateGrating(this, this.FF(i), VF, contrast,orient);
+                                opto = ApplyOptoFilter(this, scaled_grating, VF, contrast); % returns the texture if opto
+                                stimulus =  ScaleStimulus(this, opto, this.p.delta, this.p.offset, contrast, VF);
+                        
                             elseif strcmp(this.type{1,1},'eye')
                                 break_cond = 0;
                                 while (break_cond == 0)
@@ -170,14 +183,16 @@ classdef CSFExpt
                                         break_cond = 1;
                                     end
                                 end
-                                [stimulus] = GenerateEMGrating(this, this.FF(i), VF, contrast, orient, trial_eyeData); % Generates grating with eye-movement if 'eye'
-                                opto_stim = ApplyOptoFilter(this, stimulus, VF, contrast);
-                                eye_stim = CorrectEyeMovement(this, opto_stim, trial_eyeData, this.FF(i), orient);
-                                Tex = MakeTex(this, eye_stim);
-
+                                grating = GenerateEMGrating(this, this.FF(i), VF, contrast, orient, trial_eyeData); % Generates grating with eye-movement if 'eye'
+                                opto = ApplyOptoFilter(this, grating, VF, contrast);
+                                eye = CorrectEyeMovement(this, opto, trial_eyeData, this.FF(i), orient);
+                                stimulus =  ScaleStimulus(this, eye, this.p.delta, this.p.offset, contrast, VF);
+                             
                             end
-                        end
 
+                        end
+                        
+                        Tex = MakeTex(this, stimulus);
                         if ~this.DEBUG_WTS
                             if this.preload
                                 Screen('PreloadTextures', this.theScreen, Tex);
@@ -432,6 +447,7 @@ classdef CSFExpt
                     text.color = 1;
 
                     % Setting the screen text size
+
                     Screen('TextSize', this.theScreen, text.size);
 
                     % Flip (show) the screen
@@ -441,6 +457,7 @@ classdef CSFExpt
                     HideCursor;
                     ListenChar(2);
                 end
+
 
             catch ME
                 disp('Error in opening the screen.')
@@ -465,6 +482,7 @@ classdef CSFExpt
             sprintf(keyPressed);
             if strcmp(keyPressed, '0')
                 Snd('Play',this.beepBegin,44100);
+
                 returnCode = 1;
             elseif strcmp(keyPressed, 'LeftArrow') || strcmp(keyPressed, '4')
                 if CR == 1 % -45 degrees and correct
@@ -483,6 +501,7 @@ classdef CSFExpt
                     returnCode = 1;
                 elseif CR == 1
                     response = 0; % 45 and incorrect
+
                     Snd('Play',this.beepLow,44100);
                     returnCode = 1;
                 end
@@ -550,25 +569,26 @@ classdef CSFExpt
         end
 
         %% Generate an input grating for a given SF and TF
-        function [stimulus, gratings] = GenerateGrating(this, SF, TF, contrast, orient)
+        function [stimulus] = GenerateGrating(this, SF, TF, contrast, orient)
+            if this.DEBUG_STIMCHANGE
+                SF = 2;
+                TF = 2;
+                contrast = 1;
+            end
             ramp = cos(orient*pi/180)*this.input.params.x + sin(orient*pi/180)*this.input.params.y;
             grating = contrast*cos(2*pi*ramp*SF).*this.input.aperture;
             tt = sin(2*pi*this.t*TF)'.*this.stim.ramp'; % Use the outer product to get 'stimulus' which is the counterphase grating movie (very fast).
             stimulus = tt*grating(:)';
-            gv = ((1/(contrast*TF))*var(stimulus)>0); %0.000001);
-            % Pull out the subset of the stimulus movie containing only varying pixels.
-            G = stimulus(:,gv);
-            G = this.display.gray*((G+1));
-            gratings = (this.display.gray-0.002)*ones(length(this.t), size(this.input.aperture,1), size(this.input.aperture,2));
-            for frame=1:length(this.t)
-                gratings(frame,gv) = G(frame,:);
-                %                 img = reshape(gratings(frame,:),size(this.input.aperture));
-            end
+            % TODO: change stimulus to grating3d
         end
 
         function [stimulus] = GenerateEMGrating(this, SF, TF, contrast, orient, eyeData)
             stimulus = [];
-            % TF = 1.5;
+            if this.DEBUG_STIMCHANGE
+                SF = 2;
+                TF = 2;
+                contrast = 1;
+            end
             ramp = cos(orient*pi/180)*this.input.params.x + sin(orient*pi/180)*this.input.params.y;
             first_frame = 0; eye_iter = 0;
             last_frame = eyeData(3, 1);
@@ -579,14 +599,16 @@ classdef CSFExpt
                 else
                     last_frame = length(this.t);
                 end
+%                 scaleFac = contrast*(this.display.gray-0.002);
+                scaleFac = contrast;
                 if orient == 45
-                    grating1 = contrast*cos((2*pi*SF)*(ramp - eyeData(4,eye_iter)/3)).*this.input.aperture;
-                    grating2 = contrast*cos((2*pi*SF)*(ramp - 2*eyeData(4,eye_iter)/3)).*this.input.aperture;
-                    grating3 = contrast*cos((2*pi*SF)*(ramp - eyeData(4,eye_iter))).*this.input.aperture;
+                    grating1 = scaleFac*cos((2*pi*SF)*(ramp - eyeData(4,eye_iter)/3)).*this.input.aperture;
+                    grating2 = scaleFac*cos((2*pi*SF)*(ramp - 2*eyeData(4,eye_iter)/3)).*this.input.aperture;
+                    grating3 = scaleFac*cos((2*pi*SF)*(ramp - eyeData(4,eye_iter))).*this.input.aperture;
                 else
-                    grating1 = contrast*cos((2*pi*SF)*(ramp - eyeData(5,eye_iter)/3)).*this.input.aperture;
-                    grating2 = contrast*cos((2*pi*SF)*(ramp - 2*eyeData(5,eye_iter)/3)).*this.input.aperture;
-                    grating3 = contrast*cos((2*pi*SF)*(ramp - eyeData(5,eye_iter))).*this.input.aperture;
+                    grating1 = scaleFac*cos((2*pi*SF)*(ramp - eyeData(5,eye_iter)/3)).*this.input.aperture;
+                    grating2 = scaleFac*cos((2*pi*SF)*(ramp - 2*eyeData(5,eye_iter)/3)).*this.input.aperture;
+                    grating3 = scaleFac*cos((2*pi*SF)*(ramp - eyeData(5,eye_iter))).*this.input.aperture;
                 end
                 %                 grating = contrast*cos(2*pi*SF*ramp);
                 %                 grating = imtranslate(grating, [eyeData(1,eye_iter), eyeData(2,eye_iter)]);
@@ -619,7 +641,7 @@ classdef CSFExpt
 
         %% Function to apply optogenetic filter on the given stimulus input
         function [opto_stim] = ApplyOptoFilter(this, stimulus, TF, contrast)
-            opto_stim = this.p.delta*(zeros(size(stimulus))+this.p.offset);
+            % opto_stim = this.p.delta*(zeros(size(stimulus))+this.p.offset);
             % Find the varying pixels.
             gv = ((1/(contrast*TF))*var(stimulus)>0.000000);
             % Pull out the subset of the stimulus movie containing only varying pixels.
@@ -647,47 +669,65 @@ classdef CSFExpt
 
                     % For real time computation, compute each frame by uncommenting
                     % this line:
-                    opto_stim(j,gv) = this.p.delta*(opto_out(j,:)+this.p.offset);
+                    % opto_stim(j,gv) = this.p.delta*(opto_out(j,:)+this.p.offset);
+                    opto_stim(j,gv) = opto_out(j,:);
                 end
-                %                  opto_stim = reshape(temp(j,:),size(this.input.aperture));
-                %                 if ~this.DEBUG_WTS
-                %                     Tex(j) = Screen('MakeTexture', this.theScreen, img(:,:));
-                %                 end
+
             end
+        end
+
+
+        function [scaled_stimulus] = ScaleStimulus(this, stimulus, scaleFac, offset, contrast, TF)
+            gv = ((1/(contrast*TF))*var(stimulus)>0); %0.000001);
+            % Pull out the subset of the stimulus movie       
+            G = stimulus(:,gv);
+            G = scaleFac*((G+offset));
+            scaled_stimulus = scaleFac*(zeros(size(stimulus))+offset);
+
+            for frame=1:length(this.t)
+                scaled_stimulus(frame,gv) = G(frame,:);
+            end
+
         end
 
         function [Tex] = MakeTex(this, stimulus)
             Tex = [];
+            if this.DEBUG_STIMCHANGE
+                slice = ceil(size(this.input.aperture,1)/2);
+                xtemp = linspace(0, 1, size(this.input.aperture,2));
+                ps = zeros(length(this.t), 1);
+            end
+
             for frame=1:length(this.t)
                 img = reshape(stimulus(frame,:),size(this.input.aperture));
+
+                if this.DEBUG_STIMCHANGE
+                    bp(frame) = bandpower(img(slice,:));
+                    figure(1)
+                    plot(xtemp, img(slice, :));
+                    ylim([this.display.gray-1 ,this.display.gray+1]);
+                    grid on;
+                    pause(0.1);
+                    title('Stimulus')
+                end
+
                 if ~this.DEBUG_WTS
                     Tex(frame) = Screen('MakeTexture', this.theScreen, img(:,:));
                 end
             end
+            if this.DEBUG_STIMCHANGE
+                unbiased_bp = bp - mean(bp);
+                totAvg_bp = (mean(bp))*ones(length(this.t),1);
+                figure(2)
+                plot(this.t, unbiased_bp);
+                hold on;
+                plot(this.t, totAvg_bp);
+                grid on;
+                title('Average band power')
+                xlabel('Duration of signal in s');
+                ylabel('Average band power');
+            end
         end
-
-        %% Add Eye movements to any given input image - this is for any given image. Not grating; To be implemented
-%         function eye_stim = AddEyeMovements(this,stimulus,eyeData)
-%             first_frame = 0; eye_iter = 1;
-%             last_frame = eyeData(3, 1);
-%             eye_stim = this.p.delta*(zeros(size(stimulus))+this.p.offset);
-%             %             move_aperture = exp(-((this.input.params.x+eyeData(1,1)).^2+(this.input.params.y+eyeData(2,2)).^2)/(2*this.stim.sigma^2));
-% 
-%             for frame=1:length(this.t)
-%                 if (frame>= first_frame) && (frame < last_frame)
-% 
-%                     temp = imtranslate(opto_stim(frame , :), [-1*eyeData(1,eye_iter), -1*eyeData(2,eye_iter)]);
-%                     temp = (reshape(temp,size(this.input.aperture))).*this.input.aperture;
-%                     eye_stim(frame, :) = temp(:);
-%                 else
-% 
-%                     eye_iter = eye_iter+1;
-%                     first_frame = last_frame;
-%                     last_frame = min(length(this.t), first_frame+eyeData(3, eye_iter));
-% %                     move_aperture = exp(-((this.input.params.x+eyeData(1,eye_iter)).^2+(this.input.params.y+eyeData(2,eye_iter)).^2)/(2*this.stim.sigma^2));
-%                 end
-%             end
-%         end
 
 
         %% Function to correct for eye movements - saccadic suppression
@@ -723,9 +763,32 @@ classdef CSFExpt
                     temp = reshape(opto_stim(frame,:),size(this.input.aperture));
                     temp2 = imtranslate(temp, [-1*movex, -1*movey], 'FillValues',this.display.gray-0.002);
                     eye_stim(frame, :) = temp2(:);
+
                     % move_aperture = exp(-((this.input.params.x+movex).^2+(this.input.params.y+movey).^2)/(2*this.stim.sigma^2));
             end
         end
 
+        %% Add Eye movements to any given input image - this is for any given image. Not grating; To be implemented
+%         function eye_stim = AddEyeMovements(this,stimulus,eyeData)
+%             first_frame = 0; eye_iter = 1;
+%             last_frame = eyeData(3, 1);
+%             eye_stim = this.p.delta*(zeros(size(stimulus))+this.p.offset);
+%             %             move_aperture = exp(-((this.input.params.x+eyeData(1,1)).^2+(this.input.params.y+eyeData(2,2)).^2)/(2*this.stim.sigma^2));
+% 
+%             for frame=1:length(this.t)
+%                 if (frame>= first_frame) && (frame < last_frame)
+% 
+%                     temp = imtranslate(opto_stim(frame , :), [-1*eyeData(1,eye_iter), -1*eyeData(2,eye_iter)]);
+%                     temp = (reshape(temp,size(this.input.aperture))).*this.input.aperture;
+%                     eye_stim(frame, :) = temp(:);
+%                 else
+% 
+%                     eye_iter = eye_iter+1;
+%                     first_frame = last_frame;
+%                     last_frame = min(length(this.t), first_frame+eyeData(3, eye_iter));
+% %                     move_aperture = exp(-((this.input.params.x+eyeData(1,eye_iter)).^2+(this.input.params.y+eyeData(2,eye_iter)).^2)/(2*this.stim.sigma^2));
+%                 end
+%             end
+%         end
     end
 end

@@ -42,7 +42,7 @@ scaleFac = [(disp.pixperdeg/org.pixperdeg)*[1,1], disp.fps/org.fps];
 for img_id = 1:length(files) % iterating through images
     load (append(DATA_DIR, files(img_id).name)); %loads subj_names_list, fix_data, eye_data
     for sub_id = 1:length(fix_data) % iterating through subjects
-        if jitter_flag
+        if jitter_flag ~= 0
             eyeData{1, sub_id} = [];
         end
         %         if img_id == 1
@@ -63,11 +63,14 @@ for img_id = 1:length(files) % iterating through images
         temp(1,:) = ((temp(1,:)*scaleFac(1)));
         temp(2,:) = (temp(2,:)*scaleFac(2));
 
-        if jitter_flag
+        if jitter_flag == 1
             temp(3,:) = floor((fix_data{1, sub_id}(3,1:end-1)*scaleFac(3))/10);
             temp(4,:) = FindProjection(temp(1:2,:), 1);
             temp(5,:) = FindProjection(temp(1:2,:),-1);
             eyeData{1, sub_id} = [eyeData{1, sub_id}, temp];
+        elseif(jitter_flag) == 2
+            eyeData{1, sub_id} = [0;0;300;0;0] ;
+            
         else
             temp(3,:) = floor((fix_data{1, sub_id}(3,1:end-1)*scaleFac(3))/2);
             temp(4,:) = FindProjection(temp(1:2,:), 1);
