@@ -761,7 +761,8 @@ classdef CSFExpt
 
                     % temp = (reshape(opto_stim(frame,:),size(move_aperture))).*move_aperture;
                     temp = reshape(opto_stim(frame,:),size(this.input.aperture));
-                    temp2 = imtranslate(temp, [-1*movex, -1*movey], 'FillValues',this.display.gray-0.002);
+                    %temp2 = imtranslate(temp, [-1*movex, -1*movey], 'FillValues',this.display.gray-0.002);
+                    temp2 = imtranslate(temp, [-1*movex, -1*movey]);
                     eye_stim(frame, :) = temp2(:);
 
                     % move_aperture = exp(-((this.input.params.x+movex).^2+(this.input.params.y+movey).^2)/(2*this.stim.sigma^2));
