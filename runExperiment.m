@@ -31,15 +31,15 @@ switch cond_prompt
         cond_prompt = 'eye_v2'; % Opto (with eye-movements) with fixed spatial frequencies
     otherwise
         sprintf("Please enter a valid condition. Thanks!")
-        return;                    %
+        return;                    
 
 end
 
 config.DEBUG = 0; % Set this to 1 to debug the functionality with only a few trials
 config.DEBUG_WTS = 0; % Set this to 1 to debug without the psychtoolbox screen being displayed
-config.fRate = 60;
-config.jitter_flag = 0;
-config.DEBUG_STIMCHANGE = 1; % Set this to 1 to observe the sinusoids and associated band power graphs
+config.fRate = 120;
+config.jitter_flag = 0; % 0:= Regular eye-movements; 1:= Rapid changes to fixation; 2:= No eye movements
+config.DEBUG_STIMCHANGE = 0; % Set this to 1 to observe the sinusoids and associated band power graphs
 config.photoswitch = '4_BGAG_12_460_SNAPmGluR';
 config.inputType = 'grating' ;
 expt = CSFExpt(cond_prompt, sID, config);

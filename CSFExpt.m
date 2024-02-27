@@ -18,7 +18,7 @@ classdef CSFExpt
         %display.fRate: Frame rate of the display - 120Hz for ours
         % dispay.dist: in cm; measure your viewing distance
         display = struct('resolution', [1920 1080], ...
-            'width', 71, 'dist', 80, ...
+            'width', 71, 'dist', 40, ...
             'screen', 0, ...
             'fRate', 120, ...
             'pxPerDeg', 0, ...
@@ -140,6 +140,7 @@ classdef CSFExpt
                         end
 
                         if (strcmp(this.fixFreq,'temporal'))
+                            %fprintf('SF = %f, TF = %f, contrast = %f, orient=%d \n',VF, this.FF(i), contrast, orient);
                             if strcmp(this.type{1,1},'baseline')
                                 grating = GenerateGrating(this, VF, this.FF(i), contrast, orient);
                                 stimulus = ScaleStimulus(this, grating, this.display.gray, 1, contrast, this.FF(i));
@@ -166,13 +167,14 @@ classdef CSFExpt
 
 
                         elseif(strcmp(this.fixFreq,'spatial'))
+                            %fprintf('SF = %f, TF = %f, contrast = %f, orient=%d \n', this.FF(i), VF, contrast, orient);
                             if strcmp(this.type{1,1},'baseline')
                                 grating = GenerateGrating(this, this.FF(i), VF, contrast,orient);
                                 stimulus =  ScaleStimulus(this, grating, this.display.gray, 1, contrast, VF);
             
                             elseif strcmp(this.type{1,1},'opto')
                                 grating = GenerateGrating(this, this.FF(i), VF, contrast,orient);
-                                opto = ApplyOptoFilter(this, scaled_grating, VF, contrast); % returns the texture if opto
+                                opto = ApplyOptoFilter(this, grating, VF, contrast); % returns the texture if opto
                                 stimulus =  ScaleStimulus(this, opto, this.p.delta, this.p.offset, contrast, VF);
                         
                             elseif strcmp(this.type{1,1},'eye')
@@ -239,6 +241,11 @@ classdef CSFExpt
                         [returnCode, response] = PlayFbSounds(this,keyPressed, CR);
                         if returnCode == 0 && breakExperiment == 1
                             fprintf("Experiment quit by the user; Pressed %s key on trial = %d \n", keyPressed, trial);
+                            if (strcmp(this.fixFreq,'temporal'))
+                                fprintf('SF = %f, TF = %f',VF, this.FF(i));
+                            else
+                                fprintf('SF = %f, TF = %f',this.FF(i), VF);
+                            end
                             breakExperiment = 1;
                             Screen('CloseAll');
                             break;
@@ -261,7 +268,9 @@ classdef CSFExpt
                         if ~this.DEBUG_WTS
                             Screen('Close');
                         end
-
+                        if breakExperiment
+                            break;
+                        end
                     end
 
                     output = struct('qcsf', qcsf, 'stim', this.stim,'display', this.display, 'sID', ...
@@ -272,9 +281,10 @@ classdef CSFExpt
                         data(["SF_" + this.FF(i)]) = output;
                     end
 
-                    if breakExperiment
-                        break;
-                    end
+                    % if quitExperiment
+                    %     break;
+                    % end
+
                 end
 
                 this.time.endExp = datestr(now);
@@ -290,7 +300,6 @@ classdef CSFExpt
                     mkdir(outputdir)
                 end
                 save([append(outputdir, filesep, this.sID, '_qCSF_', this.stim.condition, '_')  datestr(now, 'yy-mm-dd_HH-MM') '.mat'], 'data');
-
 
             catch ME
                 this.time.endExp = datestr(now);
@@ -383,7 +392,8 @@ classdef CSFExpt
                         this.stim.seed = rng(230).Seed;
                         this.FF = this.stim.FF;
                     else
-                        this.stim.FF = exp(linspace(log(0.5), log(36),5));
+                        this.stim.FF = exp(linspace(log(0.5), log(20),5));
+                        % this.stim.FF = [0.5000,    1.4565,    4.2426,   12.3586, 30];
                         this.stim.seed = rng('shuffle').Seed;
                         this.stim.numTrialsPerFreq = 50;
                         this.FF = this.stim.FF(randperm(length(this.stim.FF)));
@@ -506,11 +516,11 @@ classdef CSFExpt
                     returnCode = 1;
                 end
             elseif strcmp(keyPressed, 'q') || strcmp(keyPressed, 'ESCAPE')
-                fprintf("Experiment quit by the user; Pressed %s key on trial = %d \n", keyPressed, trial);
+                fprintf("Experiment quit by the user; Pressed %s key \n", keyPressed);
                 returnCode = 0;
                 response = NaN;
             else
-                fprintf('Experiment broken by the user; Pressed an invalid key on trial = %d \n', trial);
+                fprintf('Experiment broken by the user; Pressed an invalid key\n');
                 returnCode = -1;
                 response = NaN;
             end
@@ -571,21 +581,34 @@ classdef CSFExpt
         %% Generate an input grating for a given SF and TF
         function [stimulus] = GenerateGrating(this, SF, TF, contrast, orient)
             if this.DEBUG_STIMCHANGE
-                SF = 2;
-                TF = 2;
-                contrast = 1;
+                %SF = 12.358603;
+                SF = 16;
+                clear mex;
+                TF = 1;
+                contrast = 0.440624d;
             end
             ramp = cos(orient*pi/180)*this.input.params.x + sin(orient*pi/180)*this.input.params.y;
+            
             grating = contrast*cos(2*pi*ramp*SF).*this.input.aperture;
+           
             tt = sin(2*pi*this.t*TF)'.*this.stim.ramp'; % Use the outer product to get 'stimulus' which is the counterphase grating movie (very fast).
+           
             stimulus = tt*grating(:)';
-            % TODO: change stimulus to grating3d
+
+            if this.DEBUG_STIMCHANGE
+                figure(5)
+                imagesc(ramp);
+                figure(6)
+                imagesc(grating);
+                figure(7)
+                plot(tt);
+            end
         end
 
         function [stimulus] = GenerateEMGrating(this, SF, TF, contrast, orient, eyeData)
             stimulus = [];
             if this.DEBUG_STIMCHANGE
-                SF = 2;
+                SF = 16;
                 TF = 2;
                 contrast = 1;
             end
@@ -678,14 +701,15 @@ classdef CSFExpt
 
 
         function [scaled_stimulus] = ScaleStimulus(this, stimulus, scaleFac, offset, contrast, TF)
-            gv = ((1/(contrast*TF))*var(stimulus)>0); %0.000001);
+            %gv = ((1/(contrast*TF))*var(stimulus)>0); %0.000001);
             % Pull out the subset of the stimulus movie       
-            G = stimulus(:,gv);
+            %G = stimulus(:,gv);
+            G = stimulus;
             G = scaleFac*((G+offset));
             scaled_stimulus = scaleFac*(zeros(size(stimulus))+offset);
 
             for frame=1:length(this.t)
-                scaled_stimulus(frame,gv) = G(frame,:);
+                scaled_stimulus(frame,:) = G(frame,:);
             end
 
         end
