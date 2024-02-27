@@ -392,7 +392,7 @@ classdef CSFExpt
                         this.stim.seed = rng(230).Seed;
                         this.FF = this.stim.FF;
                     else
-                        this.stim.FF = exp(linspace(log(0.5), log(20),5));
+                        this.stim.FF = exp(linspace(log(0.5), log(16),5));
                         % this.stim.FF = [0.5000,    1.4565,    4.2426,   12.3586, 30];
                         this.stim.seed = rng('shuffle').Seed;
                         this.stim.numTrialsPerFreq = 50;
@@ -585,7 +585,7 @@ classdef CSFExpt
                 SF = 16;
                 clear mex;
                 TF = 1;
-                contrast = 0.440624d;
+                contrast = 0.440624;
             end
             ramp = cos(orient*pi/180)*this.input.params.x + sin(orient*pi/180)*this.input.params.y;
             
