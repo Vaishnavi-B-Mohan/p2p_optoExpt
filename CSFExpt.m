@@ -361,7 +361,12 @@ classdef CSFExpt
             if length(this.type) >= 2
                 this.stim.numFrames = round(this.display.fRate*this.stim.dur/1000);
                 slope = 16; tails = this.stim.numFrames/slope;
-                this.stim.ramp = [linspace(0,1,tails) ones(1, this.stim.numFrames-2*tails) linspace(1, 0, tails)];
+                intermediate = this.stim.numFrames-2*tails;
+                if mod(intermediate,2) == 0
+                    this.stim.ramp = [linspace(0,1,tails) ones(1, this.stim.numFrames-2*tails) linspace(1, 0, tails)];
+                else
+                    this.stim.ramp = [linspace(0,1,tails) ones(1, this.stim.numFrames-2*tails + 1) linspace(1, 0, tails)];
+                end
 
                 if strcmp(this.type{1,1},'opto' ) || strcmp(this.type{1,1}, 'eye')
                     this = SetOptoProperties(this, photoswitch);
@@ -584,13 +589,13 @@ classdef CSFExpt
                 %SF = 12.358603;
                 SF = 16;
                 clear mex;
-                TF = 1;
-                contrast = 0.440624;
+                TF = 25;
+                % contrast = 0.440624;
+                contrast = 1;
             end
             ramp = cos(orient*pi/180)*this.input.params.x + sin(orient*pi/180)*this.input.params.y;
             
             grating = contrast*cos(2*pi*ramp*SF).*this.input.aperture;
-           
             tt = sin(2*pi*this.t*TF)'.*this.stim.ramp'; % Use the outer product to get 'stimulus' which is the counterphase grating movie (very fast).
            
             stimulus = tt*grating(:)';
@@ -601,7 +606,7 @@ classdef CSFExpt
                 figure(6)
                 imagesc(grating);
                 figure(7)
-                plot(tt);
+                plot(this.t, tt);
             end
         end
 
@@ -609,7 +614,7 @@ classdef CSFExpt
             stimulus = [];
             if this.DEBUG_STIMCHANGE
                 SF = 16;
-                TF = 2;
+                TF = 30;
                 contrast = 1;
             end
             ramp = cos(orient*pi/180)*this.input.params.x + sin(orient*pi/180)*this.input.params.y;
