@@ -24,7 +24,7 @@ function qcsf = setupQCSF
 
 
 %%%%%%%%%%%%%%%%%% Setting up the quick CSF stimulus space  %%%%%%%%%%%%%%%%%%%%
-contrastLevels = 60;    
+contrastLevels = 400;    
 frequencyLevels = 12;
 % the sampling levels for the 2-D space of grating frequency and contrast
 

@@ -18,7 +18,7 @@ classdef CSFExpt
         %display.fRate: Frame rate of the display - 120Hz for ours
         % dispay.dist: in cm; measure your viewing distance
         display = struct('resolution', [1920 1080], ...
-            'width', 71, 'dist', 40, ...
+            'width', 70, 'dist', 200, ...
             'screen', 0, ...
             'fRate', 120, ...
             'pxPerDeg', 0, ...
@@ -589,10 +589,16 @@ classdef CSFExpt
                 %SF = 12.358603;
                 SF = 16;
                 clear mex;
-                TF = 25;
+                TF = 1;
                 % contrast = 0.440624;
                 contrast = 1;
+            else
+                % SF = 16;
+                % TF = 1;
+                % contrast = 1;
             end
+
+            
             ramp = cos(orient*pi/180)*this.input.params.x + sin(orient*pi/180)*this.input.params.y;
             
             grating = contrast*cos(2*pi*ramp*SF).*this.input.aperture;
