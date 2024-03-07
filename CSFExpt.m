@@ -10,7 +10,7 @@ classdef CSFExpt
         % centre of the stimulus (in degrees of VA - usually set this to 0)
         % width/height of the stimulus prior to gaussian envelope
         % gaussian envelope over the grating (in degree of visual angle)
-        stim = struct('condition', '', 'dur', 800, 'center', [0,0], 'size', [10,10], 'sigma', 1.25, 'numTrialsPerFreq', 0);
+        stim = struct('condition', '', 'dur', 800, 'center', [0,0], 'size', [8,8], 'sigma', 1.25, 'numTrialsPerFreq', 0);
         input = {};
 
         % Display variables: Room 510 - Display++
@@ -120,7 +120,7 @@ classdef CSFExpt
                         end
                         %%
                         if strcmp(this.type{1,1},'opto') || strcmp(this.type{1,1}, 'eye')
-                            WaitSecs(0.005);
+                           % WaitSecs(0.005);
                         else
                             WaitSecs(0.5);
                         end
@@ -397,7 +397,7 @@ classdef CSFExpt
                         this.stim.seed = rng(230).Seed;
                         this.FF = this.stim.FF;
                     else
-                        this.stim.FF = exp(linspace(log(0.5), log(16),5));
+                        this.stim.FF = exp(linspace(log(0.5), log(18),5));
                         % this.stim.FF = [0.5000,    1.4565,    4.2426,   12.3586, 30];
                         this.stim.seed = rng('shuffle').Seed;
                         this.stim.numTrialsPerFreq = 50;
@@ -675,9 +675,9 @@ classdef CSFExpt
 
         %% Function to apply optogenetic filter on the given stimulus input
         function [opto_stim] = ApplyOptoFilter(this, stimulus, TF, contrast)
-            % opto_stim = this.p.delta*(zeros(size(stimulus))+this.p.offset);
+            opto_stim = stimulus;%this.p.delta*(zeros(size(stimulus))+this.p.offset);
             % Find the varying pixels.
-            gv = ((1/(contrast*TF))*var(stimulus)>0.000000);
+            gv = ((1/(contrast*TF))*var(stimulus)>0.00001);
             % Pull out the subset of the stimulus movie containing only varying pixels.
             G = stimulus(:,gv);
             % Zero out model variables, size is only for the varying pixels.
@@ -712,8 +712,8 @@ classdef CSFExpt
 
 
         function [scaled_stimulus] = ScaleStimulus(this, stimulus, scaleFac, offset, contrast, TF)
-            %gv = ((1/(contrast*TF))*var(stimulus)>0); %0.000001);
-            % Pull out the subset of the stimulus movie       
+            %gv = ((1/(contrast*TF))*var(stimulus)>0.001); %0.000001);
+            % %Pull out the subset of the stimulus movie       
             %G = stimulus(:,gv);
             G = stimulus;
             G = scaleFac*((G+offset));
@@ -747,7 +747,7 @@ classdef CSFExpt
                 end
 
                 if ~this.DEBUG_WTS
-                    Tex(frame) = Screen('MakeTexture', this.theScreen, img(:,:));
+                    Tex(frame) = Screen('MakeTexture', this.theScreen, img(:,:),[],[],2);
                 end
             end
             if this.DEBUG_STIMCHANGE

@@ -24,7 +24,7 @@ function qcsf = setupQCSF
 
 
 %%%%%%%%%%%%%%%%%% Setting up the quick CSF stimulus space  %%%%%%%%%%%%%%%%%%%%
-contrastLevels = 400;  %switched from 60 to 40  
+contrastLevels = 200;  %switched from 60 to 40  
 frequencyLevels = 12;
 % the sampling levels for the 2-D space of grating frequency and contrast
 
@@ -35,7 +35,7 @@ minContrast = .001;    % min and max values for grating contrast
 maxContrast = 1;
 
 minFrequency=.25;      % min and max values for grating frequency
-maxFrequency=20;
+maxFrequency=18;
 
 gratingContrast = 10.^linspace(log10(minContrast),log10(maxContrast),contrastLevels)';
 gratingFrequency = 10.^linspace(log10(minFrequency),log10(maxFrequency),frequencyLevels)';
