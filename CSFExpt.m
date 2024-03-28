@@ -131,7 +131,7 @@ classdef CSFExpt
                         %                         CR = randi(2);
                         if CR == 1
                             orient = -45; % in degress
-                        else
+                        elseif CR == 2
                             orient = 45;
                         end
                         
