@@ -10,7 +10,7 @@ classdef CSFExpt
         % centre of the stimulus (in degrees of VA - usually set this to 0)
         % width/height of the stimulus prior to gaussian envelope
         % gaussian envelope over the grating (in degree of visual angle)
-        stim = struct('condition', '', 'dur', 800, 'center', [0,0], 'size', [8,8], 'sigma', 1.25, 'numTrialsPerFreq', 0);
+        stim = struct('condition', '', 'dur', 800, 'center', [0,0], 'size', [8,8], 'sigma', 1, 'numTrialsPerFreq', 0);
         input = {};
 
         % Display variables: Room 510 - Display++
@@ -397,7 +397,7 @@ classdef CSFExpt
                         this.stim.seed = rng(230).Seed;
                         this.FF = this.stim.FF;
                     else
-                        this.stim.FF = exp(linspace(log(0.5), log(18),5));
+                        this.stim.FF = exp(linspace(log(0.5), log(16),5));
                         % this.stim.FF = [0.5000,    1.4565,    4.2426,   12.3586, 30];
                         this.stim.seed = rng('shuffle').Seed;
                         this.stim.numTrialsPerFreq = 50;

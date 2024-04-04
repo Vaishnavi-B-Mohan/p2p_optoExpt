@@ -35,7 +35,7 @@ minContrast = .001;    % min and max values for grating contrast
 maxContrast = 1;
 
 minFrequency=.25;      % min and max values for grating frequency
-maxFrequency=18;
+maxFrequency=16;
 
 gratingContrast = 10.^linspace(log10(minContrast),log10(maxContrast),contrastLevels)';
 gratingFrequency = 10.^linspace(log10(minFrequency),log10(maxFrequency),frequencyLevels)';
