@@ -75,18 +75,23 @@ classdef modelCSF
                 end
 
             end
+            exptData(1).condition = 'baseline'; exptData(2).condition = 'opto'; exptData(3).condition = 'eye';
+            exptData(1).data = baseline; exptData(2).data = opto; exptData(3).data = eye;
+            
 
             if save_flag
-                baseline_file = string(['../analysis_data' filesep subjectID '_baseline.mat']);
-                save(baseline_file, "baseline");
-                opto_file = string(['../analysis_data' filesep subjectID '_opto.mat']);
-                save(opto_file, "opto");
-                eye_file = string(['../analysis_data' filesep subjectID '_eye.mat']);
-                save(eye_file, "eye");
+                collatedData_File = string(['../analysis_data' filesep subjectID '_collatedData.mat']);
+                save(collatedData_File, "exptData");
+%                 baseline_file = string(['../analysis_data' filesep subjectID '_baseline.mat']);
+%                 save(baseline_file, "baseline");
+%                 opto_file = string(['../analysis_data' filesep subjectID '_opto.mat']);
+%                 save(opto_file, "opto");
+%                 eye_file = string(['../analysis_data' filesep subjectID '_eye.mat']);
+%                 save(eye_file, "eye");
             else
+                
                 this.modelData(1).condition = 'baseline'; this.modelData(2).condition = 'opto'; this.modelData(3).condition = 'eye';
                 this.modelData(1).data = baseline; this.modelData(2).data = opto; this.modelData(3).data = eye;
-
                 plotcolors = ['b'; 'r'; 'g'];
                 markerfacecolors = [0, 0, 1; 1, 0, 1; 1, 1, 0];
                 for i = 1:length(this.modelData)
