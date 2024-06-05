@@ -132,7 +132,7 @@ classdef modelCSF
 
             tf =  inputData(:,1);
             sf =  inputData(:,2);
-            contrast =  inputData(:,3)./100;
+            contrast =  0.1.^inputData(:,3);
             resp = inputData(:,4);
 
             % Find the sensitivity for each stimulus
