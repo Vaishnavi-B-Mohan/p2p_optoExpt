@@ -7,8 +7,11 @@ if nargin <=2
 end
 % DATA_DIR        = '../Data/eyemovements/';
 if ~exist(DATA_DIR)
-    sprintf("Please enter a valid directory containing eye-movement data. Thank you!");
-    return
+    DATA_DIR        = '/home/vaishnavi/UW/Sight_Restoration/p2p_optoExpt/Data/eyemovements/';
+    if ~exist(DATA_DIR)
+        sprintf("Please enter a valid directory containing eye-movement data. Thank you!")
+        return
+    end
 end
 
 files = dir(fullfile(DATA_DIR, '*.mat'));
@@ -60,13 +63,20 @@ for img_id = 1:length(files) % iterating through images
 
         temp = [];
         temp = diff(fix_data{1, sub_id},1,2);
-        temp(1,:) = ((temp(1,:)*scaleFac(1)));
-        temp(2,:) = (temp(2,:)*scaleFac(2));
+        if size(temp,2) > 1
+            temp(1:2,1) = 0;
+%             temp(1,:) = ((temp(1,:)*scaleFac(1)));
+%             temp(2,:) = (temp(2,:)*scaleFac(2));
+            temp(1,2:end) = ((temp(1,2:end)*scaleFac(1)));
+            temp(2,2:end) = (temp(2,2:end)*scaleFac(2));
+        end
 
         if jitter_flag == 1
             temp(3,:) = floor((fix_data{1, sub_id}(3,1:end-1)*scaleFac(3))/10);
-            temp(4,:) = FindProjection(temp(1:2,:), 1);
-            temp(5,:) = FindProjection(temp(1:2,:),-1);
+            temp(4,:) = FindProjection(temp(1:2,:), -1);
+            temp(5,:) = FindProjection(temp(1:2,:), +1);
+            temp = repmat(temp(:,2:end), 1, 30);
+            temp(1:2,1) = 0; temp(4:5,1) = 0;
             eyeData{1, sub_id} = [eyeData{1, sub_id}, temp];
         elseif(jitter_flag) == 2
             eyeData{1, sub_id} = [0;0;300;0;0] ;

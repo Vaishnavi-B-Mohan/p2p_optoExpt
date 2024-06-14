@@ -22,7 +22,7 @@ switch cond_prompt
     case 2
         cond_prompt = 'baseline_v2'; % Baseline condition with fixed spatial frequencies
     case 3
-        cond_prompt = 'opto_v1'; % Opto condition with fixed temporal frequencies
+        cond_prompt = 'opto_v1'; % Opto condition with fixed 5 temporal frequencies
     case 4
         cond_prompt = 'opto_v2'; % Opto condition with fixed spatial frequencies
     case 5
@@ -35,15 +35,17 @@ switch cond_prompt
 
 end
 
-config.DEBUG = 0; % Set this to 1 to debug the functionality with only a few trials
-config.DEBUG_WTS = 0; % Set this to 1 to debug without the psychtoolbox screen being displayed
+config.DEBUG = 1; % Set this to 1 to debug the functionality with only a few trials
+config.DEBUG_WTS = 1; % Set this to 1 to debug without the psychtoolbox screen being displayed
 config.fRate = 120;
-config.jitter_flag = 0; % 0:= Regular eye-movements; 1:= Rapid changes to fixation; 2:= No eye movements
-config.DEBUG_STIMCHANGE = 0; % Set this to 1 to observe the sinusoids and associated band power graphs
+config.jitter_flag = 1; % 0:= Regular eye-movements; 1:= Rapid changes to fixation; 2:= No eye movements
+config.DEBUG_STIMCHANGE = 1; % Set this to 1 to observe the sinusoids and associated band power graphs
+config.DEBUG_RECORDMOVIES = 1;
+config.DEBUG_PLOTFFT = 0;
 config.photoswitch = '4_BGAG_12_460_SNAPmGluR';
 config.inputType = 'grating' ;
 expt = CSFExpt(cond_prompt, sID, config);
 RunExpt(expt);
 
 sprintf("Thank you. Goodbye!")
-
+close all;

@@ -11,7 +11,14 @@
 % projected in the direction of -inf 
 
 function [proj] = FindProjection(vec, slope)
-line = [1, slope];
+if slope == inf 
+    line = [0; 1];
+elseif slope == -inf
+    line = [0; -1];
+else
+    line = [1; slope];
+end
+
 proj = zeros(1,size(vec,2));
 for i = 1:size(vec, 2)
     proj(i) = dot(line,vec(:,i))/dot(line, line);
