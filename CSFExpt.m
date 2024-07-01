@@ -147,7 +147,7 @@ classdef CSFExpt
                             if this.DEBUG_STIMCHANGE
                                 clear mex;
                                 VF = 2;
-                                this.FF(i) = 1;
+                                this.FF(i) = 1.875;
                                 sprintf('TF = %f, SF = %f', this.FF(i), VF)
                                 contrast = 1;
                             end
@@ -191,7 +191,8 @@ classdef CSFExpt
 
                                     grating = GenerateEMGrating(this, VF, this.FF(i), contrast, orient, trial_eyeData); % Generates grating with eye-movement if 'eye'
                                     opto = ApplyOptoFilter(this, grating, this.FF(i), contrast);
-                                    eye = CorrectEyeMovement(this, grating, trial_eyeData, this.FF(i));
+%                                     eye = CorrectEyeMovement(this, opto, trial_eyeData, this.FF(i));
+                                    eye = CorrectEyeMovement(this, opto, this.FF(i));
                                     stimulus =  ScaleStimulus(this, eye, this.p.delta, this.p.offset, contrast, this.FF(i));
 
                                 end
@@ -244,7 +245,7 @@ classdef CSFExpt
 
                         end
                         if this.DEBUG_STIMCHANGE
-                            Tex = MakeTex(this,  stim_opto,stim_eye);
+                            Tex = MakeTex(this,  stim_ctl, stim_opto, stim_eye);
                         else
                             Tex = MakeTex(this, stimulus);
                         end
@@ -641,7 +642,7 @@ classdef CSFExpt
 
             ramp = cos(orient*pi/180)*this.input.params.x + sin(orient*pi/180)*this.input.params.y;
 
-            grating = contrast*cos(2*pi*ramp*SF); %.*this.input.aperture;
+            grating = contrast*cos(2*pi*ramp*SF).*this.input.aperture;
             tt = cos(2*pi*this.t*TF)'.*this.stim.ramp'; % Use the outer product to get 'stimulus' which is the counterphase grating movie (very fast).
 
             stimulus = tt*grating(:)';
@@ -916,10 +917,12 @@ classdef CSFExpt
                 if this.DEBUG_STIMCHANGE
                     maximg = max(stimulus(frame,:))*ones(size(xtemp));
                     minimg = min(stimulus(frame,:))*ones(size(xtemp));
+%                     avgimg = mean(stimulus(frame,:))*ones(size(xtemp));
                     if ~isempty(stimulus2)
                         img2 = reshape(stimulus2(frame,:),size(this.input.aperture));
                         maximg2 = max(stimulus2(frame,:))*ones(size(xtemp));
                         minimg2 = min(stimulus2(frame,:))*ones(size(xtemp));
+%                         avgimg2 = mean(stimulus2(frame,:))*ones(size(xtemp));
                     end
                     if ~isempty(stimulus3)
                         img3 = reshape(stimulus3(frame,:),size(this.input.aperture));
@@ -983,7 +986,7 @@ classdef CSFExpt
                     end
                     ylim([this.display.gray-0.3 ,this.display.gray+0.3]);
                     grid on;
-                    pause(0.2);
+                    pause(0.1);
                     %                     title('Stimulus SF = 2; TF = 5; orig_contrast = 1', 'Interpreter','none')
                     %                     xlabel('Normalized spatial frequency');
                     %                     ylabel('Contrast after opto-filtering')
@@ -1034,17 +1037,24 @@ classdef CSFExpt
 
         function [eye_stim] = CorrectEyeMovement(this, opto_stim, TF)
 
-
+            DEBUG_JITTER = 0;
+            optoflip = 1;
             tt = (cos(2*pi*TF*(this.t)));
+%             opto_sum = mean(opto_stim,2);
             inflection = find((tt < 1e-10) & (tt > -1e-10));
+%             addframes = ceil(this.p.tau_off*TF);
+            if optoflip
+                addframes = 4;
+            else
+                addframes = 0;
+            end
+            inflection = inflection + addframes;
+%             inflection = find((opto_sum < 0.202 + 1e-10) & (opto_sum > 0.202 - 1e-10));
             if ~isempty(inflection)
                 inflection = [1, squeeze(inflection)];
             else
                 inflection = [1, length(this.t)+1];
             end
-
-            DEBUG_JITTER = 0;
-            optoflip = 0;
 
 %             sprintf('Frame rate = %f', this.display.fRate)
 
@@ -1052,20 +1062,39 @@ classdef CSFExpt
             [m , i] = max(m);
             eye_stim = reshape(opto_stim,[],size(this.input.aperture,1), size(this.input.aperture,2));
 
-            if mod(floor(i/inflection(2)),2) == optoflip
-                maxgrating = squeeze(eye_stim(i,:,:)); 
-                counterphase_grating = -1.*squeeze(eye_stim(i,:,:));
+            if optoflip
+                if mod(floor(i/inflection(2)),2) == 1
+                    counterphase_grating = squeeze(eye_stim(i,:,:));
+                    if length(inflection) > 2
+                        maxgrating = squeeze(eye_stim(min(i+inflection(2), length(this.t)),:,:));
+                    else
+                        maxgrating = counterphase_grating;
+                    end
+                else
+                    maxgrating = squeeze(eye_stim(i,:,:));
+                    if length(inflection) > 2
+                        counterphase_grating = squeeze(eye_stim(min(i+inflection(2), length(this.t)),:,:));
+                    else
+                        counterphase_grating = maxgrating;
+                    end
+                end
             else
-                counterphase_grating = squeeze(eye_stim(i,:,:)); 
-                maxgrating = -1.*squeeze(eye_stim(i,:,:));
+                if mod(floor(i/inflection(2)),2) == 0
+                    counterphase_grating = -1.*squeeze(eye_stim(i,:,:));
+                    maxgrating = squeeze(eye_stim(i,:,:));
+                else
+                    maxgrating = -1.*squeeze(eye_stim(i,:,:));
+                    counterphase_grating = squeeze(eye_stim(i,:,:));
+                end
             end
+
 
             iter = 1;
 
             if ~DEBUG_JITTER
                 for frame = 1:length(this.t)
                     grating = squeeze(eye_stim(frame, :,:));
-                    if frame == inflection(min(iter, length(inflection)))
+                    if (frame == 1) || (frame == inflection(min(iter, length(inflection))))
                         iter = iter + 1;
                         if mod(iter,2) == 0
                             fft_grating = counterphase_grating;
@@ -1079,14 +1108,14 @@ classdef CSFExpt
                         grating = changephase_fft(grating, first_fft, maxAmp);
 
                     end
-                    eye_stim(frame,:,:) = grating; %.*this.input.aperture;
+                    eye_stim(frame,:,:) = grating.*this.input.aperture;
 
                 end
 
             else
                 for frame = 1:length(this.t)
                     grating = squeeze(eye_stim(frame, :,:));
-                    eye_stim(frame,:,:) = grating; %.*this.input.aperture;
+                    eye_stim(frame,:,:) = grating.*this.input.aperture;
                 end
             end
 
