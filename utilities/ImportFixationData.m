@@ -79,7 +79,7 @@ for img_id = 1:length(files) % iterating through images
             temp(1:2,1) = 0; temp(4:5,1) = 0;
             eyeData{1, sub_id} = [eyeData{1, sub_id}, temp];
         elseif(jitter_flag) == 2
-            eyeData{1, sub_id} = [0;0;300;0;0] ;
+            eyeData{1, sub_id} = repmat([0;0;300;0;0], 1,2);
             
         else
             temp(3,:) = floor((fix_data{1, sub_id}(3,1:end-1)*scaleFac(3))/2);

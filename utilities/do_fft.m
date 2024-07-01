@@ -4,6 +4,7 @@ f=fft2(grating);
 % f_mag =log(abs(fftshift(f)));
 % f_ang = (angle(fftshift(f)));
 f_ang_unshifted = (angle(f));
+% maxAmp = max(max(abs(f)));
 % figure
 % subplot(2,1,1)
 % imshow(f_mag);
