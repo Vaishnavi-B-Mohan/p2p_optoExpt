@@ -184,7 +184,7 @@ classdef CSFExpt
 
                                     grating = GenerateEMGrating(this, VF, this.FF(i), contrast, orient, trial_eyeData); % Generates grating with eye-movement if 'eye'
                                     opto = ApplyOptoFilter(this, grating, VF, contrast);
-                                    eye = CorrectEyeMovement(this, opto, this.FF(i));
+                                    eye = CorrectEyeMovement(this, grating, this.FF(i));
                                     stim_eye =  ScaleStimulus(this, eye, this.p.delta, this.p.offset, contrast, VF);
                                     %                                     sprintf('Range of opto+eye: = %f', (max(max(stim_eye)) - min(min(stim_eye))))
                                 else
@@ -1038,7 +1038,7 @@ classdef CSFExpt
         function [eye_stim] = CorrectEyeMovement(this, opto_stim, TF)
 
             DEBUG_JITTER = 0;
-            optoflip = 1;
+            optoflip = 0;
             tt = (cos(2*pi*TF*(this.t)));
 %             opto_sum = mean(opto_stim,2);
             inflection = find((tt < 1e-10) & (tt > -1e-10));
@@ -1049,7 +1049,6 @@ classdef CSFExpt
                 addframes = 0;
             end
             inflection = inflection + addframes;
-%             inflection = find((opto_sum < 0.202 + 1e-10) & (opto_sum > 0.202 - 1e-10));
             if ~isempty(inflection)
                 inflection = [1, squeeze(inflection)];
             else
@@ -1079,9 +1078,9 @@ classdef CSFExpt
                     end
                 end
             else
-                if mod(floor(i/inflection(2)),2) == 0
-                    counterphase_grating = -1.*squeeze(eye_stim(i,:,:));
+                if mod(floor(i/inflection(2)),2) == 1
                     maxgrating = squeeze(eye_stim(i,:,:));
+                    counterphase_grating = -1.*squeeze(eye_stim(i,:,:));
                 else
                     maxgrating = -1.*squeeze(eye_stim(i,:,:));
                     counterphase_grating = squeeze(eye_stim(i,:,:));
@@ -1104,8 +1103,8 @@ classdef CSFExpt
                         [first_fft] = do_fft(fft_grating);
                         
                     else
-                        maxAmp = max(max(grating));
-                        grating = changephase_fft(grating, first_fft, maxAmp);
+%                         maxAmp = max(max(grating));
+                        grating = changephase_fft(grating, first_fft);
 
                     end
                     eye_stim(frame,:,:) = grating.*this.input.aperture;
