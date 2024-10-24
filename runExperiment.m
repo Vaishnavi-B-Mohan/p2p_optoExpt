@@ -37,15 +37,15 @@ end
 
 config.DEBUG = 1; % Set this to 1 to debug the functionality with only a few trials
 config.DEBUG_WTS = 1; % Set this to 1 to debug without the psychtoolbox screen being displayed
-config.fRate = 120;
-config.jitter_flag = 1; % 0:= Regular eye-movements; 1:= Rapid changes to fixation; 2:= No eye movements
+config.fRate = 60;
+config.jitter_flag = 0; % 0:= Regular eye-movements; 1:= Rapid changes to fixation; 2:= No eye movements
 config.DEBUG_STIMCHANGE = 1; % Set this to 1 to observe the sinusoids and associated band power graphs
-config.DEBUG_RECORDMOVIES = 1;
+config.DEBUG_RECORDMOVIES = 0;
 config.DEBUG_PLOTFFT = 0;
-config.photoswitch = '4_BGAG_12_460_SNAPmGluR';
+config.photoswitch = 'ChRmine'; % ["4_BGAG_12_460_SNAPmGluR", "ChR2", "ReaChR", "ChrimsonR", "CsChrimson", "bReaChES", "ChRmine"];
 config.inputType = 'grating' ;
 expt = CSFExpt(cond_prompt, sID, config);
-RunExpt(expt);
+RunExpt(expt); 
 
 sprintf("Thank you. Goodbye!")
 close all;

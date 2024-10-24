@@ -1,0 +1,1 @@
+function err = fitWeibull(p,results)w = weibull(p,results.intensity);%hack!  pull the values of w away from 0 and 1w = max(min(w,.99),.01);% w*.99+.005;err = -sum(results.response.*log(w) + (1-results.response).*log(1-w));
