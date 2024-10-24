@@ -19,10 +19,6 @@ classdef modelCSF
                 contains(x,'error'),{fileList.name}, 'Unif',0);
             fileList = fileList(~[indices{:}]);
 
-            if length(fileList) <6
-                error('Please check if you have all conditions for this participant');
-            end
-
             %             dataTable = table;
             %             varTypes= {'string', 'string','double','double','double','double'};
             %             varNames = {'SubID', 'Condition','TF','SF', 'Contrast', 'Response'};
@@ -75,8 +71,19 @@ classdef modelCSF
                 end
 
             end
-            exptData(1).condition = 'baseline'; exptData(2).condition = 'opto'; exptData(3).condition = 'eye';
-            exptData(1).data = baseline; exptData(2).data = opto; exptData(3).data = eye;
+              
+            if ~isempty(baseline)
+                exptData(1).condition = 'baseline';
+                exptData(1).data = baseline; 
+            end
+            if ~isempty(opto)
+                exptData(2).condition = 'opto';
+                exptData(2).data = opto; 
+            end
+            if ~isempty(eye)
+                exptData(3).condition = 'eye';
+                exptData(3).data = eye;
+            end
             
 
             if save_flag
