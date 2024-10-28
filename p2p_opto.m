@@ -12,7 +12,7 @@ methods (Access = public)
     function [offset, scaleFac] = get_scalefactor(this, y, min_TF, luminance)
 %         V = -60; lambda = 590;
         pad = 1000; % Specify the amount of time to pad with ones before and after stimulus in ms 
-        dt = 10;
+        dt = 20;
 %         time = 0:1/dt:(1000 + pad);
 % 
 %         LuxScaleFactor = (luminance)*luxtoirradiance(lambda*1e-3);

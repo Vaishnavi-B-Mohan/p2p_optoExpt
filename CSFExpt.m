@@ -150,7 +150,7 @@ classdef CSFExpt
                             if this.DEBUG_STIMCHANGE
                                 clear mex;
 %                                 VF = 5;
-%                                 this.FF(i) = 20;
+                                this.FF(i) = 16;
                                 sprintf('TF = %f, SF = %f', this.FF(i), VF)
                                 contrast = 1;
                             end
@@ -161,7 +161,8 @@ classdef CSFExpt
                             elseif strcmp(this.type{1,1},'opto')
                                 grating = GenerateGrating(this, VF, this.FF(i), contrast, orient);
                                 opto = ApplyOptoFilter(this, grating, this.FF(i), contrast, VF);
-                                stimulus =  ScaleStimulus(this, opto, this.p.delta, this.p.offset);
+                                % stimulus =  ScaleStimulus(this, opto, this.p.delta, this.p.offset);
+                                stimulus =  ScaleStimulus(this, opto, 0.404, 0);
 
                             elseif strcmp(this.type{1,1},'eye')
                                 break_cond = 0;
@@ -390,13 +391,13 @@ classdef CSFExpt
                 if this.type{2,1} == 'v1'
                     this.fixFreq = 'temporal';
                     if this.DEBUG
-                        this.stim.FF =  30*(1/2).^(4:-1:0); %[3 10];
+                        this.stim.FF =  [2, 4, 8, 12, 16];  %16*(1/2).^(4:-1:0); %[3 10];
                         this.stim.numTrialsPerFreq = 3;
                         this.stim.seed = rng(230).Seed;
                         this.FF = this.stim.FF;
                     else
                         this.stim.seed = rng('shuffle').Seed;
-                        this.stim.FF =  30*(1/2).^(4:-1:0); %[3.75 7.5 15];
+                        this.stim.FF =  [2, 4, 8, 12, 16]; %[3.75 7.5 15];
                         this.stim.numTrialsPerFreq = 50;
                         this.FF = this.stim.FF(randperm(length(this.stim.FF)));
                     end
@@ -851,8 +852,8 @@ classdef CSFExpt
                 end
 
             elseif strcmp(this.opsin, 'ChRmine')
-                name = ["./Data/LoadMats/tf_" + TF + ".mat"];
-%                 name = ["./Data/LoadMats/temp2.mat"];
+                name = ["../Data/LoadMats/tf_" + TF + ".mat"];
+                % name = ["./Data/LoadMats/temp2.mat"];
                 if ~exist(name)
                     sprintf("Error: The opto response for the requested frequencies doesn't exist in the database. Please generate it!")
                     return
@@ -910,8 +911,6 @@ classdef CSFExpt
 
             for frame=1:length(this.t)
                 img = reshape(stimulus(frame,:),size(this.input.aperture));
-                maximg = max(stimulus(frame,:))*ones(size(xtemp));
-                minimg = min(stimulus(frame,:))*ones(size(xtemp));
                 if this.DEBUG_STIMCHANGE
                     if ~isempty(stimulus2)
                         img2 = reshape(stimulus2(frame,:),size(this.input.aperture));
@@ -974,6 +973,8 @@ classdef CSFExpt
                         hold off;
                         legend('opto-only','opto+eye-mvt');
                     else
+                        maximg = max(stimulus(frame,:))*ones(size(xtemp));
+                        minimg = min(stimulus(frame,:))*ones(size(xtemp));
                         plot(xtemp, img(slice, :));
                         hold on;
                         plot(xtemp, maximg, 'r')

@@ -1,8 +1,13 @@
 clear all; close all; clc;
 
-addpath(genpath('../utilities/')); 
-addpath(genpath('../model/')); 
+addpath(genpath('../../UWToolbox'));
+addpath(genpath('../utilities/'));
+addpath(genpath('../model/'));
 addpath(genpath("../"));
+dataDir = ["../Data/LoadMats/"];
+if ~exist(dataDir)
+    mkdir(dataDir)
+end
 
 sz_deg = [8,8]; % size in degrees - this has to match the experiment parameters
 display = struct('resolution', [1920 1080], ...
@@ -19,15 +24,15 @@ ar = sz(1)/sz(2);   % aspect ratio
 ang = -45;           % orientation of Gabor
 sigma = 1;         % size of Gaussian for the Gabor
 contrast = 1;      
-dt = 10;           % time step (msec) should be frame rate
+dt = 20;           % time step (msec) should be frame rate
 dur = 800;            % duration (milliseconds)
 pad = 1000;
 
-Fixed_TF = 30*(1/2).^(4:-1:0);
+Fixed_TF = [2, 4, 8, 12, 16]; %16*(1/2).^(4:-1:0);
 Variable_SF = 10.^linspace(log10(.25),log10(16),12)';
 
 Fixed_SF = exp(linspace(log(0.5), log(16),5));
-Variable_TF = 10.^linspace(log10(3),log10(30),12)';
+Variable_TF = 10.^linspace(log10(3),log10(18),12)';
 
 TFs = [Fixed_TF'; Variable_TF]; 
 nC = 1024;  %number of contrasts in bank
@@ -47,15 +52,19 @@ lum = 0.5; opsin = ["ChRmine"]; % 'ChR2', 'ReaChR', 'ChrimsonR', 'CsChrimson', '
 
     for j = 1:length(TFs)
         tf = TFs(j);
-%     tf = Fixed_TF(j);
+%     tf = Fixed_TF(j);        dataDir = ["../Data/LoadMats/"];
+        if ~exist(dataDir)
+            mkdir(dataDir)
+        end
         if ang < 0
             nameang = 180-ang;
         else
             nameang = ang;
         end
-        name = ["../Data/LoadMats/tf_" + tf + ".mat"];
-        name = ["../Data/LoadMats/temp2.mat"];
-        if ~exist(name)
+
+        name = [dataDir + "tf_" + tf + ".mat"];
+        % name = [dataDir + "temp2.mat"];
+        if 1%~exist(name)
         % Generate the banks of contrast and opsin modulated time courses
         bank = [ones(dt*pad,1024)/2; ((1+sin(2*pi*tf*t/1000)'*cList)/2)];
         y = zeros(size(bank));
@@ -72,7 +81,7 @@ lum = 0.5; opsin = ["ChRmine"]; % 'ChR2', 'ReaChR', 'ChrimsonR', 'CsChrimson', '
             [offset, scaleFac] = opto.get_scalefactor(y(:,1024), tf, lum);
         elseif ~exist('offset', 'var')
             opto = p2p_opto(opsin);
-            [offset, scaleFac] = opto.get_scalefactor(y(:,1024), 1.875, 0.5);
+            [offset, scaleFac] = opto.get_scalefactor(y(:,1024), 2, 0.5);
         end
         
         
@@ -86,14 +95,14 @@ lum = 0.5; opsin = ["ChRmine"]; % 'ChR2', 'ReaChR', 'ChrimsonR', 'CsChrimson', '
         grid on;
 
         count=0;
-        for g = dt*pad+1:83:length(t_combined)
+        for g = dt*pad+1:166:length(t_combined)
             temp = y(g,:);
             count = count+1;
             SkipFramesBank(count,:) = temp;
 
         end
         
-        max(max(SkipFramesBank(:,1024)))
+        % max(max(SkipFramesBank(:,1024)))
         save(name, 'SkipFramesBank');
         else
             load(name, 'SkipFramesBank');
