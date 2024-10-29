@@ -251,7 +251,7 @@ classdef CSFExpt
                         toc
 
                         tic
-                        [keyPressed] = wait4key({'LeftArrow','RightArrow', 'ESCAPE', 'q'}, -3);
+                        [keyPressed] = wait4key({'LeftArrow','RightArrow', 'ESCAPE', 'q', '4', '6'}, -3);
                         sprintf(keyPressed);
                         [returnCode, response] = PlayFbSounds(this,keyPressed, CR);
                         if returnCode == 0 && breakExperiment == 1
@@ -314,7 +314,12 @@ classdef CSFExpt
                 if ~(isfolder(outputdir))
                     mkdir(outputdir)
                 end
-                save([append(outputdir, filesep, this.sID, '_qCSF_', this.stim.condition, '_')  datestr(now, 'yy-mm-dd_HH-MM') '.mat'], 'data');
+
+                if strcmp(this.type{1,1}, "opto") && strcmp(this.opsin, "ChRmine")
+                    save([append(outputdir, filesep, this.sID, '_qCSF_', this.type{1,1}, '2_', this.type{2,1}, '_')  datestr(now, 'yy-mm-dd_HH-MM') '.mat'], 'data');
+                else
+                    save([append(outputdir, filesep, this.sID, '_qCSF_', this.stim.condition, '_')  datestr(now, 'yy-mm-dd_HH-MM') '.mat'], 'data');
+                end
 
             catch ME
                 this.time.endExp = datestr(now);
